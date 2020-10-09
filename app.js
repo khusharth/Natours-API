@@ -1,8 +1,11 @@
 const fs = require('fs');
 const express = require('express');
+const morgan = require('morgan');
 
 const app = express();
 
+// 1) MIDDLEWARES
+app.use(morgan('dev')); // Displays request info on the terminal
 // need to use this middleware to add the data from the body to the req object
 app.use(express.json());
 
@@ -10,6 +13,7 @@ const tours = JSON.parse(
   fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`)
 );
 
+// 2) ROUTE HANDLERS
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'Hello from the server side!' });
 });
@@ -101,6 +105,8 @@ const deleteTour = (req, res) => {
   });
 };
 
+// 3) ROUTES
+
 // app.get('/api/v1/tours', getAllTours);
 // app.get('/api/v1/tours/:id', getTour);
 // app.post('/api/v1/tours', createTour);
@@ -116,6 +122,8 @@ app
   .get(getTour)
   .patch(updateTour)
   .delete(deleteTour);
+
+// 1) START SERVER
 
 const port = 3000;
 // starts a server
