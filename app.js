@@ -10,6 +10,7 @@ const app = express();
 app.use(morgan('dev')); // Displays request info on the terminal
 // need to use this middleware to add the data from the body to the req object
 app.use(express.json());
+app.use(express.static(`${__dirname}/public`));
 
 // 2) ROUTES
 
