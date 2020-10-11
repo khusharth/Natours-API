@@ -1,96 +1,109 @@
-const fs = require('fs');
+const Tour = require('../models/tourModel');
 
-const tours = JSON.parse(
-  fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`)
-);
+// const tours = JSON.parse(
+//   fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`)
+// );
 
-exports.checkID = (req, res, next, val) => {
-  if (req.params.id * 1 > tours.length) {
-    // return used to exit the function so that next middlewares are not called
-    return res.status(404).json({
+exports.getAllTours = async (req, res) => {
+  try {
+    // find method returns an array of JS Objects
+    const tours = await Tour.find();
+
+    res.status(200).json({
+      status: 'success',
+      results: tours.length,
+      data: {
+        tours,
+      },
+    });
+  } catch (err) {
+    res.status(404).json({
       status: 'fail',
-      message: 'Invalid ID',
+      message: err,
     });
   }
-
-  next();
 };
 
-exports.checkBody = (req, res, next) => {
-  if (!req.body.name || !req.body.price) {
-    return res.status(400).json({
+exports.getTour = async (req, res) => {
+  try {
+    // findById() = Tour.findOne({ _id: req.params.id })
+    const tour = await Tour.findById(req.params.id);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        tour,
+      },
+    });
+  } catch (err) {
+    res.status(404).json({
       status: 'fail',
-      message: 'Missing name or price',
+      message: err,
     });
   }
-  next();
 };
 
-exports.getAllTours = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    results: tours.length,
-    data: {
-      tours,
-    },
-  });
+exports.createTour = async (req, res) => {
+  try {
+    // M-1 Calling method on the new document
+    // const newTour = new Tour({})
+    // newTour.save()
+
+    // M-2 Calling method on Tour (Model)
+    const newTour = await Tour.create(req.body);
+
+    // 201 = created
+    res.status(201).json({
+      status: 'success',
+      data: {
+        tour: newTour,
+      },
+    });
+  } catch (err) {
+    // 400: Bad Request
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
 };
 
-exports.getTour = (req, res) => {
-  // req.params.id is a string and if we multiply a string that looks like a number
-  // with a number then the string is converted to a number
-  const id = req.params.id * 1;
+exports.updateTour = async (req, res) => {
+  try {
+    // findByIdAndUpdate = findOneAndUpdate({ _id: req.params.id }, req.body)
+    const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
+      new: true, // new updated document will be returned
+      runValidators: true, // run validation again on updated doc
+    });
 
-  // find returns an array with el that satisfies the () condition
-  const tour = tours.find((el) => el.id === id);
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      tour,
-    },
-  });
+    res.status(200).json({
+      status: 'success',
+      data: {
+        tour: updatedTour,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
 };
 
-exports.createTour = (req, res) => {
-  const newId = tours[tours.length - 1].id + 1;
-  const newTour = Object.assign(
-    {
-      id: newId,
-    },
-    req.body
-  );
+exports.deleteTour = async (req, res) => {
+  try {
+    await Tour.findByIdAndDelete(req.params.id);
 
-  tours.push(newTour);
-  fs.writeFile(
-    `${__dirname}/dev-data/data/tours-simple.json`,
-    JSON.stringify(tours),
-    (err) => {
-      // 201 = created
-      res.status(201).json({
-        status: 'success',
-        data: {
-          tour: newTour,
-        },
-      });
-    }
-  );
-};
-
-exports.updateTour = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    data: {
-      tour: '<Updated tour here...',
-    },
-  });
-};
-
-exports.deleteTour = (req, res) => {
-  // 204: No content
-  // null represents the resource that we deleted now no longer exists
-  res.status(204).json({
-    status: 'success',
-    data: null,
-  });
+    // 204: No content
+    // null represents the resource that we deleted now no longer exists
+    res.status(204).json({
+      status: 'success',
+      data: null,
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
 };
