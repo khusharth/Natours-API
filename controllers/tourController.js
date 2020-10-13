@@ -129,3 +129,102 @@ exports.deleteTour = async (req, res) => {
     });
   }
 };
+
+exports.getTourStats = async (req, res) => {
+  try {
+    // Each stage (just a query) in pipeline is an obj
+    const stats = await Tour.aggregate([
+      {
+        $match: { ratingsAverage: { $gte: 4.5 } },
+      },
+      {
+        $group: {
+          _id: { $toUpper: '$difficulty' }, // what we want to group by
+          numTours: { $sum: 1 }, // For each doc that will go through this pipeline 1 will be added to num counter
+          numRatings: { $sum: '$ratingsAverage' },
+          avgRating: { $avg: '$ratingsAverage' },
+          avgPrice: { $avg: '$price' },
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' },
+        },
+      },
+      {
+        $sort: { avgPrice: 1 }, // 1 for ascending
+      },
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        stats,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
+};
+
+exports.getMonthlyPlan = async (req, res) => {
+  try {
+    const year = req.params.year * 1;
+
+    const plan = await Tour.aggregate([
+      {
+        // Deconstruct an array field from the input document
+        // And the output 1 doc for each element of the array
+        $unwind: '$startDates',
+      },
+      {
+        $match: {
+          startDates: {
+            $gte: new Date(`${year}-01-01`), // 1st day of year
+            $lte: new Date(`${year}-12-31`), // Last day of the year
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $month: '$startDates' },
+          numToursStarts: { $sum: 1 },
+          tours: {
+            // To create an array | Push the name field
+            $push: '$name',
+          },
+        },
+      },
+      {
+        // To add a new field for month
+        $addFields: { month: '$_id' },
+      },
+      {
+        // To hide ID
+        $project: {
+          _id: 0,
+        },
+      },
+      {
+        // 1 for ascending and -1 for descending
+        $sort: { numToursStarts: -1 },
+      },
+      // {
+      //   // Limit us to have only 6 documents same as that used in req.query
+      //   $limit: 6,
+      // },
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        plan,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
+};
