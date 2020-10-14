@@ -16,6 +16,7 @@ mongoose
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
+    useUnifiedTopology: true,
   }) // promise gets access to the connection object
   .then(() => console.log('DB connection successful'));
 
