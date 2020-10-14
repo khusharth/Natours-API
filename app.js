@@ -1,6 +1,8 @@
 const express = require('express');
 const morgan = require('morgan');
 
+const AppError = require('./utils/appError');
+const globalErrorHandler = require('./controllers/errorController');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 
@@ -28,5 +30,20 @@ app.use(express.static(`${__dirname}/public`));
 // Mounting a router on a new route
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
+
+// Only UNHANDLED routes will reach here | all = get, post, put ...
+app.all('*', (req, res, next) => {
+  // res.status(404).json({
+  //   status: 'fail',
+  //   message: `Can't find ${req.originalUrl} on this server!`,
+  // });
+
+  // If the next fun receives an argument no matter what it is express will
+  // automatcially knows some error happened | Will skip all the middleware and go to the global error handling middleware
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
+
+// To define an Error handling middleware we just need to give 4 arguments to the middleware fun
+app.use(globalErrorHandler);
 
 module.exports = app;
