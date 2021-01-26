@@ -44,7 +44,7 @@ exports.getAllTours = catchAsync(async (req, res, next) => {
 
 exports.getTour = catchAsync(async (req, res, next) => {
   // findById() = Tour.findOne({ _id: req.params.id })
-  const tour = await Tour.findById(req.params.id);
+  const tour = await Tour.findById(req.params.id).populate('reviews');
 
   if (!tour) {
     // We return as we dont want below code to execute (will send 2 response)

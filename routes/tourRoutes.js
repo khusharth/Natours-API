@@ -1,8 +1,13 @@
 const express = require('express');
 const tourController = require('../controllers/tourController');
 const authController = require('../controllers/authController');
+const reviewRouter = require('./reviewRoutes');
 
 const router = express.Router();
+
+// The tour router should use the review router in case it ever
+// encounters a route like this (mounting a router)
+router.use('/:tourId/reviews', reviewRouter);
 
 // PARAM Middleware
 // router.param('id', tourController.checkID);

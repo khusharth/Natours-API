@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
@@ -39,6 +40,13 @@ const userSchema = new mongoose.Schema({
     },
   },
   passwordChangedAt: Date,
+  passwordResetToken: String,
+  passwordResetExpires: Date,
+  active: {
+    type: Boolean,
+    default: true,
+    select: false,
+  },
 });
 
 // Encryption will happen between the momemnt we receive the data
@@ -53,6 +61,27 @@ userSchema.pre('save', async function (next) {
   // undefined: To delete it as its only needed for validation
   // required only means required input not to pe persisted in the db
   this.passwordConfirm = undefined;
+  next();
+});
+
+// We want this property to update at different controllers (reset/update)
+// So doing it using middleware is a better option
+userSchema.pre('save', function (next) {
+  // Only when pass is modified and document is not new
+  // isNew and isModified are methods given by Mongoose
+  if (!this.isModified('password') || this.isNew) return next();
+
+  // Sometimes saving to db is bit slower than issuing the JWT, making it so that the
+  // changed password timestamp is set a bit after the JWT is created due to which user
+  // will not be able to login using new token. Sol = -1 sec
+  this.passwordChangedAt = Date.now() - 1000; // ensure token created is after the pass has changed
+  next();
+});
+
+// Query middleware: For every method that starts with find
+userSchema.pre(/^find/, function (next) {
+  // this points to the current query on which we chain our query
+  this.find({ active: { $ne: false } });
   next();
 });
 
@@ -75,12 +104,27 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
       this.passwordChangedAt.getTime() / 1000,
       10
     );
-    console.log(changedTimestamp, JWTTimestamp);
     return JWTTimestamp < changedTimestamp;
   }
 
   // false = NOT changed
   return false;
+};
+
+userSchema.methods.createPasswordResetToken = function () {
+  // reset Token works like a reset pass which can be used to create a new pass
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  // Encrypt token
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  // 10 mins in millisec
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+  console.log({ resetToken }, this.passwordResetToken);
+  //  Send rest token through email (not encrypted)
+  return resetToken;
 };
 
 const User = mongoose.model('User', userSchema);
